@@ -13,6 +13,22 @@ return new class extends Migration
     {
         Schema::create('resources', function (Blueprint $table) {
             $table->id();
+            
+            $table->foreignId('ward_id')
+            ->constrained()
+            ->cascadeOnDelete();
+            
+            $table->string('name');
+            $table->string('type');
+            $table->integer('quantity');
+
+            $table->enum('status',[
+                'available',
+                'occupied',
+                'maintenance',
+                'decommissioned'
+            ]);
+
             $table->timestamps();
         });
     }

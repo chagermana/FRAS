@@ -13,6 +13,11 @@ return new class extends Migration
     {
         Schema::create('audit_logs', function (Blueprint $table) {
             $table->id();
+
+            $table->string('old status');
+            $table->string('new status');
+            $table->string('changed at');
+            
             $table->timestamps();
         });
     }

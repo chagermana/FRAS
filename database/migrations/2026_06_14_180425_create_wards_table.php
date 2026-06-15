@@ -13,6 +13,11 @@ return new class extends Migration
     {
         Schema::create('wards', function (Blueprint $table) {
             $table->id();
+
+            $table->string('name');
+            $table->foreignId('hospital_id')
+            ->constrained()
+            ->cascadeOnDelete();
             $table->timestamps();
         });
     }

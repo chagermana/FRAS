@@ -17,6 +17,19 @@ return new class extends Migration
             $table->string('email')->unique();
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
+
+            $table-> enum('role', [
+                'system_admin',
+                'hospital_admin',
+                'healtcare_worker'
+            ]);
+
+            // $table->foreignId('hospital_id')
+            // ->nullable()
+            // ->constrained('')
+            // ->nullOnDelete();
+
+
             $table->rememberToken();
             $table->timestamps();
         });
