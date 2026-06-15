@@ -10,6 +10,7 @@ class Resource extends Model
     protected $fillable = [
         'ward_id',
         'name', 
+        'type',
         'quantity', 
         'status'
         ];
