@@ -19,4 +19,14 @@ class Resource extends Model
         {
             return $this->belongsTo(Ward::class);
         }
+
+        public function auditLogs()
+        {
+            return $this->hasMany(AuditLog::class);
+        }
+
+        public function comments()
+        {
+            return $this->hasMany(Comment::class);
+        }
 }

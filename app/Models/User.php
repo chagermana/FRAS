@@ -39,4 +39,14 @@ class User extends Authenticatable
     {
         return $this->belongsTo(Ward::class);
     }
+
+    public function auditLogs()
+    {
+        return $this->hasMany(AuditLog::class);
+    }
+
+    public function comments()
+    {
+        return $this->hasMany(Comment::class);
+    }
 }

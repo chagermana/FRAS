@@ -24,3 +24,4 @@ class Hospital extends Model
         }
 }
 
+

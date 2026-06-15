@@ -7,4 +7,10 @@ use Illuminate\Database\Eloquent\Model;
 class Report extends Model
 {
     //
+    protected $fillable = [
+        'period_start',
+        'period_end',
+        'content',
+        'generated_at'
+    ];
 }
