@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Resource;
+use App\Models\AuditLog;
 
 class ResourceController extends Controller
 {
@@ -59,6 +60,9 @@ class ResourceController extends Controller
         //
         $resource = Resource::findOrFail($id);
 
+        //get old status before update
+        $oldStatus = $resource->status;
+
         $validated = $request->validate([
             'ward_id' => 'sometimes|exists:wards,id',
             'name' => 'sometimes|string|max:255',
@@ -67,12 +71,26 @@ class ResourceController extends Controller
             'status' => 'sometimes|in:available,occupied,maintenance',
         ]);
 
+        //update resource
         $resource->update($validated);
 
+        $resource->refresh(); // Refresh the model instance to get the latest data from the database
+
+        //get new status after update
+        $newStatus = $resource->status;
+
+        AuditLog::create([
+            'user_id' => 1, // (we'll fix this later if no login yet)
+            'resource_id' => $resource->id,
+            'old_status' => $oldStatus,
+            'new_status' => $newStatus,
+            'changed_at' => now()
+        ]);
         return response()->json([
             'message' => 'Resource updated successfully',
             'data' => $resource
         ]);
+
     }
 
     /**

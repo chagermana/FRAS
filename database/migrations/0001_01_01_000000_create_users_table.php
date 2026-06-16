@@ -21,7 +21,7 @@ return new class extends Migration
             $table-> enum('role', [
                 'system_admin',
                 'hospital_admin',
-                'healtcare_worker'
+                'healthcare_worker'
             ]);
 
             // $table->foreignId('hospital_id')
