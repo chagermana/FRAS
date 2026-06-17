@@ -105,4 +105,19 @@ class ResourceController extends Controller
             'message' => 'Resource deleted successfully'
         ]);
     }
+
+    public function publicIndex(Request $request)
+    {
+        $query = Resource::query();
+
+        // search by name or type
+        if ($request->has('search')) {
+            $query->where('name', 'like', '%' . $request->search . '%')
+                ->orWhere('type', 'like', '%' . $request->search . '%');
+        }
+
+        return response()->json($query->get());
+        $query->limit(50)->get();
+    }
+
 }

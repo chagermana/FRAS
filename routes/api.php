@@ -11,29 +11,73 @@ use App\Http\Controllers\Api\AuditLogController;
 use App\Http\Controllers\Api\ReportController;
 use App\Http\Controllers\Api\AuthController;
 
-//Public routes
+/*
+|--------------------------------------------------------------------------
+| PUBLIC ROUTES
+|--------------------------------------------------------------------------
+*/
+
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 
-//protected routes
-Route::middleware('auth:sanctum')->group(function(){
+Route::get('/public/dashboard', [DashboardController::class, 'publicStats']);
+
+// public resource listing (with search)
+Route::get('/public/resources', [ResourceController::class, 'publicIndex']);
+
+/*
+|--------------------------------------------------------------------------
+| AUTHENTICATED ROUTES (ALL LOGGED IN USERS)
+|--------------------------------------------------------------------------
+*/
+
+Route::middleware('auth:sanctum')->group(function () {
+
     Route::post('/logout', [AuthController::class, 'logout']);
-    Route::get('/user', function (Request $request) {
-    return $request->user();
+
+    Route::get('/me', function (Request $request) {
+        return $request->user();
     });
 
-    Route::middleware('auth:sanctum')->get('/me', function (Request $request) {
-    return $request->user();
-});
+    /*
+    |--------------------------------------------------------------------------
+    | SYSTEM ADMIN ONLY
+    |--------------------------------------------------------------------------
+    */
 
-    Route::apiResource('hospitals', HospitalController::class);
-    Route::apiResource('wards', WardController::class);
-    Route::apiResource('resources', ResourceController::class);
-    Route::apiResource('comments', CommentController::class);
-    Route::apiResource('audit-logs', AuditLogController::class);
-    Route::apiResource('reports', ReportController::class);
+    Route::middleware('role:system_admin')->group(function () {
 
-    Route::get('/dashboard', [DashboardController::class, 'index']);
+        Route::apiResource('hospitals', HospitalController::class);
+        Route::apiResource('wards', WardController::class);
+        Route::apiResource('resources', ResourceController::class);
+        Route::apiResource('audit-logs', AuditLogController::class);
+        Route::apiResource('reports', ReportController::class);
 
+        Route::get('/dashboard', [DashboardController::class, 'index']);
+    });
+
+    /*
+    |--------------------------------------------------------------------------
+    | SYSTEM ADMIN + HOSPITAL ADMIN
+    |--------------------------------------------------------------------------
+    */
+
+    Route::middleware('role:system_admin,hospital_admin')->group(function () {
+
+        Route::apiResource('comments', CommentController::class);
+        Route::get('/dashboard/hospital', [DashboardController::class, 'hospital']);
+    });
+
+    /*
+    |--------------------------------------------------------------------------
+    | ALL ROLES (READ ONLY ACCESS)
+    |--------------------------------------------------------------------------
+    */
+
+    Route::middleware('role:system_admin,hospital_admin,healthcare_worker')->group(function () {
+
+        Route::get('/resources', [ResourceController::class, 'index']);
+        Route::get('/wards', [WardController::class, 'index']);
+    });
 
 });
