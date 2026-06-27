@@ -13,12 +13,39 @@ class ResourceController extends Controller
      * Display a listing of the resource.
      */
     public function index()
-    {
-        //
+{
+    $user = auth()->user();
+
+    // System admin sees everything
+    if ($user->role === 'system_admin') {
         return response()->json(
             Resource::with('ward')->get()
         );
     }
+
+    // Hospital admin sees resources in their hospital
+    if ($user->role === 'hospital_admin') {
+
+        $resources = Resource::whereHas('ward', function ($query) use ($user) {
+            $query->where('hospital_id', $user->hospital_id);
+        })->with('ward')->get();
+
+        return response()->json($resources);
+    }
+
+    // Healthcare worker sees only their ward
+    if ($user->role === 'healthcare_worker') {
+
+        $resources = Resource::where('ward_id', $user->ward_id)
+            ->with('ward')
+            ->get();
+
+        return response()->json($resources);
+    }
+
+    return response()->json([], 403);
+}
+
 
     /**
      * Store a newly created resource in storage.
@@ -107,17 +134,24 @@ class ResourceController extends Controller
     }
 
     public function publicIndex(Request $request)
-    {
-        $query = Resource::query();
+        {
+            $query = Resource::with('ward.hospital');
 
-        // search by name or type
-        if ($request->has('search')) {
-            $query->where('name', 'like', '%' . $request->search . '%')
-                ->orWhere('type', 'like', '%' . $request->search . '%');
+            // Search by resource name or type
+            if ($request->filled('search')) {
+
+                $search = $request->search;
+
+                $query->where(function ($q) use ($search) {
+
+                    $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('type', 'like', "%{$search}%");
+                });
+            }
+
+            return response()->json(
+                $query->limit(50)->get()
+            );
         }
-
-        return response()->json($query->get());
-        $query->limit(50)->get();
-    }
 
 }

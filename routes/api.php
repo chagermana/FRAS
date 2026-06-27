@@ -25,6 +25,11 @@ Route::get('/public/dashboard', [DashboardController::class, 'publicStats']);
 // public resource listing (with search)
 Route::get('/public/resources', [ResourceController::class, 'publicIndex']);
 
+Route::get(
+    '/public/hospitals',
+    [HospitalController::class, 'publicIndex']
+);
+
 /*
 |--------------------------------------------------------------------------
 | AUTHENTICATED ROUTES (ALL LOGGED IN USERS)

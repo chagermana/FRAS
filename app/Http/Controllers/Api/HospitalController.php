@@ -12,15 +12,34 @@ class HospitalController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
-    {
-        //
-        return response()->json(
-            Hospital::all()
-        );
+    public function publicIndex()
+        {
+            $hospitals = \App\Models\Hospital::with('wards.resources')->get();
 
-    }
+            $data = $hospitals->map(function ($hospital) {
 
+                $resources = $hospital->wards->flatMap->resources;
+
+                return [
+
+                    'id' => $hospital->id,
+                    'name' => $hospital->name,
+
+                    'total_resources' => $resources->count(),
+
+                    'available_resources' =>
+                        $resources->where('status', 'available')->count(),
+
+                    'occupied_resources' =>
+                        $resources->where('status', 'occupied')->count(),
+
+                    'maintenance_resources' =>
+                        $resources->where('status', 'maintenance')->count(),
+                ];
+            });
+
+            return response()->json($data);
+        }
     /**
      * Store a newly created resource in storage.
      */

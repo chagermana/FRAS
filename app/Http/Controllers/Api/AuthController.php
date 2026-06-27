@@ -12,17 +12,65 @@ class AuthController extends Controller
     public function register(Request $request)
     {
         $validated = $request->validate([
-            'name' => 'required',
+            'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users',
             'password' => 'required|min:6',
-            'role' => 'in:system_admin,hospital_admin,healthcare_worker'
-        ]);
 
+            'role' => 'required|in:system_admin,hospital_admin,healthcare_worker',
+
+            'hospital_id' => 'nullable|exists:hospitals,id',
+            'ward_id' => 'nullable|exists:wards,id',
+    ]);
+
+    if (
+        $validated['role'] === 'system_admin'
+        && (
+            isset($validated['hospital_id'])
+            || isset($validated['ward_id'])
+        )
+    ) {
+        return response()->json([
+            'message' => 'System admins cannot belong to a hospital or ward.'
+        ], 422);
+    }
+
+    if (
+        $validated['role'] === 'hospital_admin'
+        && empty($validated['hospital_id'])
+    ) {
+        return response()->json([
+            'message' => 'Hospital admins must have a hospital.'
+        ], 422);
+    }
+
+    if (
+        $validated['role'] === 'hospital_admin'
+        && !empty($validated['ward_id'])
+    ) {
+        return response()->json([
+            'message' => 'Hospital admins cannot belong to a ward.'
+        ], 422);
+    }
+
+    if (
+        $validated['role'] === 'healthcare_worker'
+        && (
+            empty($validated['hospital_id'])
+            || empty($validated['ward_id'])
+        )
+    ) {
+        return response()->json([
+            'message' => 'Healthcare workers must belong to both a hospital and a ward.'
+        ], 422);
+}
+        
         $user = User::create([
             'name' => $validated['name'],
             'email' => $validated['email'],
             'password' => Hash::make($validated['password']),
             'role' => $validated['role'] ?? 'healthcare_worker',
+            'hospital_id' => $validated['hospital_id'] ?? null,
+            'ward_id' => $validated['ward_id'] ?? null,
         ]);
 
         $token = $user->createToken('api-token')->plainTextToken;
