@@ -78,6 +78,9 @@ Route::middleware('auth:sanctum')->group(function () {
 
         Route::get('/resources', [ResourceController::class, 'index']);
         Route::get('/wards', [WardController::class, 'index']);
+
+        //
+        Route::patch('/resources/{resource}', [ResourceController::class, 'update']);
     });
 
 });
