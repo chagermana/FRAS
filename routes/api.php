@@ -55,7 +55,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
         Route::apiResource('hospitals', HospitalController::class);
         Route::apiResource('wards', WardController::class);
-        Route::apiResource('resources', ResourceController::class);
+
         Route::apiResource('audit-logs', AuditLogController::class);
         Route::apiResource('reports', ReportController::class);
         
@@ -74,6 +74,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::apiResource('comments', CommentController::class);
         Route::get('/dashboard/hospital', [DashboardController::class, 'hospital']);
         Route::apiResource('users', UserController::class)->except(['store']);
+
+        //only admins mange resources
+        Route::apiResource('resources', ResourceController::class);
     });
 
     /*
@@ -87,7 +90,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/resources', [ResourceController::class, 'index']);
         Route::get('/wards', [WardController::class, 'index']);
 
-        //
+        //workers can only update status of resources in their ward
         Route::patch('/resources/{resource}', [ResourceController::class, 'update']);
 
         Route::get('/comments',[CommentController::class,'index']);
