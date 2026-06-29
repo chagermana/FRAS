@@ -57,6 +57,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::apiResource('resources', ResourceController::class);
         Route::apiResource('audit-logs', AuditLogController::class);
         Route::apiResource('reports', ReportController::class);
+        
 
         Route::get('/dashboard', [DashboardController::class, 'index']);
     });
@@ -86,6 +87,9 @@ Route::middleware('auth:sanctum')->group(function () {
 
         //
         Route::patch('/resources/{resource}', [ResourceController::class, 'update']);
+
+        Route::get('/comments',[CommentController::class,'index']);
+        Route::post('/comments',[CommentController::class,'store']);
     });
 
 });

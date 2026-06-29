@@ -12,12 +12,41 @@ class CommentController extends Controller
      * Display a listing of the resource.
      */
     public function index()
-    {
-        //
-        return response()->json(
-        Comment::with(['user', 'resource'])->get()
-    );
+{
+    $user = auth()->user();
+
+    $query = Comment::with([
+        'user',
+        'resource.ward.hospital'
+    ]);
+
+    // System admin → see everything
+    if ($user->role === 'system_admin') {
+        return response()->json($query->get());
     }
+
+    // Hospital admin → only comments in their hospital
+    if ($user->role === 'hospital_admin') {
+
+        $query->whereHas('resource.ward', function ($q) use ($user) {
+            $q->where('hospital_id', $user->hospital_id);
+        });
+
+        return response()->json($query->get());
+    }
+
+    // Healthcare worker → only comments in their ward
+    if ($user->role === 'healthcare_worker') {
+
+        $query->whereHas('resource', function ($q) use ($user) {
+            $q->where('ward_id', $user->ward_id);
+        });
+
+        return response()->json($query->get());
+    }
+
+    return response()->json([], 403);
+}
 
     /**
      * Store a newly created resource in storage.
@@ -26,13 +55,16 @@ class CommentController extends Controller
     {
         //
         $validated=$request->validate([
-            'user_id'=>'required|exists:users,id',
             'resource_id'=>'required|exists:resources,id',
             'content'=>'required|string'
         ]);
 
-        $comment=Comment::create($validated);
-        
+        $comment=Comment::create([
+            'user_id' => auth()->id(),
+            'resource_id' => $validated['resource_id'],
+            'content' => $validated['content']
+        ]);
+
         return response()->json([
             'message' => 'Comment created successfully',
             'data' => $comment

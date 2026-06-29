@@ -16,33 +16,34 @@ class AuthController extends Controller
             'email' => 'required|email|unique:users',
             'password' => 'required|min:6',
 
-            'role' => 'required|in:system_admin,hospital_admin,healthcare_worker',
+            'role' => 'required|in:hospital_admin,healthcare_worker',
 
             'hospital_id' => 'nullable|exists:hospitals,id',
             'ward_id' => 'nullable|exists:wards,id',
     ]);
 
-    if (
-        $validated['role'] === 'system_admin'
-        && (
-            isset($validated['hospital_id'])
-            || isset($validated['ward_id'])
-        )
-    ) {
-        return response()->json([
-            'message' => 'System admins cannot belong to a hospital or ward.'
-        ], 422);
-    }
+    // if (
+    //     $validated['role'] === 'system_admin'
+    //     && (
+    //         isset($validated['hospital_id'])
+    //         || isset($validated['ward_id'])
+    //     )
+    // ) {
+    //     return response()->json([
+    //         'message' => 'System admins cannot belong to a hospital or ward.'
+    //     ], 422);
+    // }
 
-    if (
-        $validated['role'] === 'hospital_admin'
-        && empty($validated['hospital_id'])
-    ) {
-        return response()->json([
-            'message' => 'Hospital admins must have a hospital.'
-        ], 422);
-    }
+    // if (
+    //     $validated['role'] === 'hospital_admin'
+    //     && empty($validated['hospital_id'])
+    // ) {
+    //     return response()->json([
+    //         'message' => 'Hospital admins must have a hospital.'
+    //     ], 422);
+    // }
 
+    //hospital admin
     if (
         $validated['role'] === 'hospital_admin'
         && !empty($validated['ward_id'])
@@ -63,7 +64,8 @@ class AuthController extends Controller
             'message' => 'Healthcare workers must belong to both a hospital and a ward.'
         ], 422);
 }
-        
+
+        //healthcare worker rules
         $user = User::create([
             'name' => $validated['name'],
             'email' => $validated['email'],
@@ -72,6 +74,7 @@ class AuthController extends Controller
             'hospital_id' => $validated['hospital_id'] ?? null,
             'ward_id' => $validated['ward_id'] ?? null,
         ]);
+
 
         $token = $user->createToken('api-token')->plainTextToken;
 
