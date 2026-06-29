@@ -9,8 +9,14 @@ use App\Models\Hospital;
 
 class HospitalController extends Controller
 {
+    public function index()
+    {
+        return response()->json(
+            Hospital::all()
+        );
+    }
     /**
-     * Display a listing of the resource.
+     * Display a listing of the resource (public).
      */
     public function publicIndex()
         {

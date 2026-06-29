@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { Input, Button } from '../components/ui';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -12,6 +13,7 @@ export default function Login() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+
     try {
       await login(email, password);
       navigate('/dashboard');
@@ -21,29 +23,92 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <form onSubmit={handleSubmit} className="bg-white p-8 rounded-lg shadow-md w-full max-w-sm">
-        <h1 className="text-2xl font-semibold mb-6 text-gray-800">FRAS Login</h1>
-        {error && <p className="text-red-600 text-sm mb-4">{error}</p>}
-        <input
-          type="email" placeholder="Email" value={email}
-          onChange={e => setEmail(e.target.value)}
-          className="w-full mb-3 px-3 py-2 border rounded-md"
-          required
-        />
-        <input
-          type="password" placeholder="Password" value={password}
-          onChange={e => setPassword(e.target.value)}
-          className="w-full mb-4 px-3 py-2 border rounded-md"
-          required
-        />
-        <button type="submit" className="w-full bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700">
-          Log In
-        </button>
-        <p className="text-sm mt-4 text-center">
-          No account? <Link to="/register" className="text-blue-600">Register</Link>
-        </p>
-      </form>
+    <div className="min-h-screen flex bg-white">
+
+      {/* Brand Panel */}
+      <div className="hidden lg:flex lg:w-[22%] max-w-[360px] border-r border-blue-900 bg-blue-950 text-white justify-center px-10">
+        <div className="space-y-32 flex flex-col justify-center">
+
+          <div>
+            <h1 className="text-3xl font-bold tracking-wide">
+              FRAS
+            </h1>
+            <p className="mt-2 text-blue-300 text-base">
+              Facility Resource Allocation System
+            </p>
+          </div>
+
+          <div>
+            <p className="text-2xl font-semibold leading-relaxed text-blue-100">
+              Real-time visibility into hospital resources,
+              wards, and staff —
+              <br />
+              all in one place.
+            </p>
+          </div>
+
+        </div>
+      </div>
+
+      {/* Login Form */}
+      <div className="flex-1 flex items-center justify-center px-6">
+        <form
+          onSubmit={handleSubmit}
+          className="w-full max-w-md"
+        >
+          <h2 className="text-4xl font-bold text-slate-900">
+            Welcome back
+          </h2>
+
+          <p className="text-slate-500 mt-2 mb-8">
+            Sign in to your FRAS account
+          </p>
+
+          {error && (
+            <div className="mb-5 rounded-lg bg-rose-50 border border-rose-200 px-4 py-3">
+              <p className="text-sm text-rose-600">
+                {error}
+              </p>
+            </div>
+          )}
+
+          <div className="space-y-4">
+            <Input
+              type="email"
+              placeholder="Email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
+
+            <Input
+              type="password"
+              placeholder="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
+          </div>
+
+          <Button
+            type="submit"
+            className="w-full mt-6"
+          >
+            Log In
+          </Button>
+
+          <p className="mt-6 text-center text-sm text-slate-500">
+            No account?{' '}
+            <Link
+              to="/register"
+              className="font-semibold text-blue-600 hover:text-blue-700"
+            >
+              Register
+            </Link>
+          </p>
+        </form>
+      </div>
+
     </div>
   );
 }
