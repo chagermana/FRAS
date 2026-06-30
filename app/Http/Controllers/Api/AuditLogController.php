@@ -11,45 +11,28 @@ class AuditLogController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
-        //
-        return response()->json(
-            AuditLog::with([
-            'user',
-            'resource',
-        ])->get());
+        $user = $request->user();
+        
+        // Eager load relations including nested ward relationship to get hospital context
+        $query = AuditLog::with(['user', 'resource.ward']);
+
+        // Enforce structural data isolation
+        if ($user->role === 'hospital_admin') {
+            $query->whereHas('resource.ward', function ($q) use ($user) {
+                $q->where('hospital_id', $user->hospital_id);
+            });
+        } elseif ($user->role !== 'system_admin') {
+            // Protect logs against unauthorized low-level access (e.g., public or ward_staff)
+            abort(403, 'Unauthorized access to system audit logs.');
+        }
+
+        return response()->json($query->latest('id')->get());
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(Request $request)
-    {
-        //
-    }
-
-    /**
-     * Display the specified resource.
-     */
-    public function show(string $id)
-    {
-        //
-    }
-
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, string $id)
-    {
-        //
-    }
-
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(string $id)
-    {
-        //
-    }
+    public function store(Request $request) {}
+    public function show(string $id) {}
+    public function update(Request $request, string $id) {}
+    public function destroy(string $id) {}
 }

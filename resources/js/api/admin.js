@@ -5,3 +5,5 @@ export const getHospitals = () => client.get('/hospitals');
 export const createHospital = (data) => client.post('/hospitals', data);
 export const updateHospital = (id, data) => client.put(`/hospitals/${id}`, data);
 export const deleteHospital = (id) => client.delete(`/hospitals/${id}`);
+export const getAllUsers = () => client.get('/users');
+export const createSystemAdmin = (data) => client.post('/users/admin', data);

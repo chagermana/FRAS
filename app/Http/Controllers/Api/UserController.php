@@ -77,6 +77,84 @@ class UserController extends Controller
         ]);
     }
 
+public function approve($id)
+    {
+        $user = auth()->user();
+        $target = User::findOrFail($id);
+
+        if ($user->role === 'hospital_admin') {
+            if ($target->role !== 'healthcare_worker' || $target->hospital_id !== $user->hospital_id) {
+                return response()->json(['message' => 'Forbidden'], 403);
+            }
+        } elseif ($user->role === 'system_admin') {
+            if ($target->role !== 'hospital_admin') {
+                return response()->json(['message' => 'Forbidden'], 403);
+            }
+        } else {
+            return response()->json(['message' => 'Forbidden'], 403);
+        }
+
+        $target->update(['status' => 'approved']);
+
+        return response()->json([
+            'message' => 'User approved successfully',
+            'data' => $target
+        ]);
+    }
+
+    public function reject($id)
+    {
+        $user = auth()->user();
+        $target = User::findOrFail($id);
+
+        if ($user->role === 'hospital_admin') {
+            if ($target->role !== 'healthcare_worker' || $target->hospital_id !== $user->hospital_id) {
+                return response()->json(['message' => 'Forbidden'], 403);
+            }
+        } elseif ($user->role === 'system_admin') {
+            if ($target->role !== 'hospital_admin') {
+                return response()->json(['message' => 'Forbidden'], 403);
+            }
+        } else {
+            return response()->json(['message' => 'Forbidden'], 403);
+        }
+
+        $target->update(['status' => 'rejected']);
+
+        return response()->json([
+            'message' => 'User rejected successfully',
+            'data' => $target
+        ]);
+    }
+
+    public function storeAdmin(Request $request)
+    {
+        $user = auth()->user();
+
+        if ($user->role !== 'system_admin') {
+            return response()->json(['message' => 'Forbidden'], 403);
+        }
+
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|unique:users',
+            'password' => 'required|min:6',
+        ]);
+
+        $newAdmin = User::create([
+            'name' => $validated['name'],
+            'email' => $validated['email'],
+            'password' => bcrypt($validated['password']),
+            'role' => 'system_admin',
+            'status' => 'approved',
+        ]);
+
+        return response()->json([
+            'message' => 'System admin created successfully',
+            'data' => $newAdmin
+        ], 201);
+    }
+
     /**
      * Remove the specified resource from storage.
      */

@@ -7,6 +7,8 @@ import PublicDashboard from './pages/PublicDashboard';
 import HealthcareWorkerDashboard from './pages/HealthcareWorkerDashboard';
 import SystemAdminDashboard from './pages/SystemAdminDashboard';
 import HospitalAdminDashboard from './pages/HospitalAdminDashboard';
+import AuditLogs from './pages/AuditLogs';
+import Reports from './pages/Reports';
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
@@ -33,6 +35,12 @@ function App() {
           <Route path="/register" element={<Register />} />
           <Route path="/dashboard" element={
             <ProtectedRoute><DashboardRouter /></ProtectedRoute>
+          } />
+          <Route path="/audit-logs" element={
+            <ProtectedRoute><AuditLogs /></ProtectedRoute>
+          } />
+          <Route path="/reports" element={
+            <ProtectedRoute><Reports /></ProtectedRoute>
           } />
         </Routes>
       </AuthProvider>

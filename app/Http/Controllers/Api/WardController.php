@@ -9,12 +9,19 @@ use App\Models\Ward;
 class WardController extends Controller
 {
     /**
-     * Display a listing of the resource.
+     * Display a listing of the resource scoped by role.
      */
     public function index()
     {
+        $user = auth()->user();
+
+        if ($user->role === 'system_admin') {
+            return response()->json(Ward::with('resources')->get());
+        }
+
+        // Hospital admins and healthcare workers only view their own facility's wards
         return response()->json(
-            Ward::with('resources')->get()
+            Ward::where('hospital_id', $user->hospital_id)->with('resources')->get()
         );
     }
 
@@ -23,17 +30,22 @@ class WardController extends Controller
      */
     public function store(Request $request)
     {
-        //
+        $user = auth()->user();
+
         $validated = $request->validate([
-            'hospital_id' => 'required|exists:hospitals,id',
             'name' => 'required|string|max:255',
- 
+            'hospital_id' => $user->role === 'system_admin' ? 'required|exists:hospitals,id' : 'nullable',
         ]);
+
+        // Force-bind hospital_id if the creator is a hospital_admin
+        if ($user->role !== 'system_admin') {
+            $validated['hospital_id'] = $user->hospital_id;
+        }
 
         $ward = Ward::create($validated);
 
         return response()->json([
-            'message'=>'Ward created successfully',
+            'message' => 'Ward created successfully',
             'data' => $ward
         ], 201);
     }
@@ -43,8 +55,13 @@ class WardController extends Controller
      */
     public function show($id)
     {
-        //
+        $user = auth()->user();
         $ward = Ward::with('resources')->findOrFail($id);
+
+        if ($user->role !== 'system_admin' && $ward->hospital_id !== $user->hospital_id) {
+            return response()->json(['message' => 'Forbidden'], 403);
+        }
+
         return response()->json($ward);
     }
 
@@ -53,13 +70,16 @@ class WardController extends Controller
      */
     public function update(Request $request, string $id)
     {
-        //
-                $ward = Ward::findOrFail($id);
+        $user = auth()->user();
+        $ward = Ward::findOrFail($id);
+
+        if ($user->role !== 'system_admin' && $ward->hospital_id !== $user->hospital_id) {
+            return response()->json(['message' => 'Forbidden'], 403);
+        }
 
         $validated = $request->validate([
-            'hospital_id' => 'sometimes|exists:hospitals,id',
             'name' => 'sometimes|string|max:255',
-
+            'hospital_id' => $user->role === 'system_admin' ? 'sometimes|exists:hospitals,id' : 'prohibited',
         ]);
 
         $ward->update($validated);
@@ -75,11 +95,16 @@ class WardController extends Controller
      */
     public function destroy(string $id)
     {
-        //
-            $ward = Ward::findOrFail($id);
-            $ward->delete();
+        $user = auth()->user();
+        $ward = Ward::findOrFail($id);
 
-            return response()->json([
+        if ($user->role !== 'system_admin' && $ward->hospital_id !== $user->hospital_id) {
+            return response()->json(['message' => 'Forbidden'], 403);
+        }
+
+        $ward->delete();
+
+        return response()->json([
             'message' => 'Ward deleted successfully'
         ]);
     }
