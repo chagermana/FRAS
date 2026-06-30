@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import DashboardLayout from '../components/DashboardLayout';
 import { Card, StatusBadge, Select, EmptyState } from '../components/ui';
 import { getMyWardResources, updateResourceStatus } from '../api/worker';
@@ -9,7 +9,10 @@ export default function HealthcareWorkerDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   
-  // Track comments per resource ID: { [resourceId]: "comment text" }
+  // Filter states
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  
   const [cardComments, setCardComments] = useState({});
   const [submittingId, setSubmittingId] = useState(null);
 
@@ -22,6 +25,16 @@ export default function HealthcareWorkerDashboard() {
   };
 
   useEffect(() => { load(); }, []);
+
+  // Filter logic: This makes the dashboard responsive and fast
+  const filteredResources = useMemo(() => {
+    return resources.filter(r => {
+      const matchesSearch = r.name.toLowerCase().includes(search.toLowerCase()) || 
+                            r.type.toLowerCase().includes(search.toLowerCase());
+      const matchesStatus = statusFilter === 'all' || r.status === statusFilter;
+      return matchesSearch && matchesStatus;
+    });
+  }, [resources, search, statusFilter]);
 
   const handleStatusChange = async (id, newStatus) => {
     try {
@@ -36,39 +49,44 @@ export default function HealthcareWorkerDashboard() {
     e.preventDefault();
     const text = cardComments[resourceId]?.trim();
     if (!text) return;
-
     setSubmittingId(resourceId);
-    setError('');
-
-    // Sending exactly what Laravel validator wants: resource_id and content
-    client.post('/comments', { 
-      resource_id: resourceId, 
-      content: text 
-    })
+    client.post('/comments', { resource_id: resourceId, content: text })
       .then(() => {
         setCardComments(prev => ({ ...prev, [resourceId]: '' }));
-        alert('Condition log appended to this resource.');
+        alert('Condition log appended.');
       })
-      .catch(err => {
-        console.error(err);
-        setError(err.response?.data?.message || 'Failed to sync comment with backend verification.');
-      })
-      .finally(() => {
-        setSubmittingId(null);
-      });
+      .finally(() => setSubmittingId(null));
   };
 
   return (
     <DashboardLayout title="Ward Resources">
-      {error && <p className="text-rose-600 text-sm mb-4 bg-rose-50 px-3 py-2 rounded-lg">{error}</p>}
+      {/* Filter Toolbar */}
+      <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm mb-6 flex flex-col md:flex-row gap-4">
+        <input
+          type="text"
+          placeholder="Search by name or type..."
+          className="flex-grow px-3 py-2 border border-slate-200 rounded-lg text-xs outline-none focus:ring-2 focus:ring-blue-500"
+          onChange={e => setSearch(e.target.value)}
+        />
+        <select 
+          className="px-3 py-2 border border-slate-200 rounded-lg text-xs outline-none bg-white"
+          onChange={e => setStatusFilter(e.target.value)}
+        >
+          <option value="all">All Statuses</option>
+          <option value="available">Available</option>
+          <option value="occupied">Occupied</option>
+          <option value="maintenance">Maintenance</option>
+          <option value="decommissioned">Decommissioned</option>
+        </select>
+      </div>
 
       {loading ? (
-        <p className="text-slate-400 text-sm">Loading resources...</p>
-      ) : resources.length === 0 ? (
-        <EmptyState>No resources assigned to your ward yet.</EmptyState>
+        <p className="text-slate-400 text-sm">Loading...</p>
+      ) : filteredResources.length === 0 ? (
+        <EmptyState>No resources match your filters.</EmptyState>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {resources.map(r => (
+          {filteredResources.map(r => (
             <Card key={r.id} className="p-4 border border-slate-200 flex flex-col justify-between space-y-4">
               <div>
                 <div className="flex justify-between items-start mb-2">
@@ -76,19 +94,13 @@ export default function HealthcareWorkerDashboard() {
                   <StatusBadge status={r.status} />
                 </div>
                 <p className="text-xs text-slate-500 mb-3">{r.type} · Qty {r.quantity}</p>
-                <Select
-                  value={r.status}
-                  onChange={e => handleStatusChange(r.id, e.target.value)}
-                  className="w-full text-xs"
-                >
+                <Select value={r.status} onChange={e => handleStatusChange(r.id, e.target.value)} className="w-full text-xs">
                   <option value="available">Available</option>
                   <option value="occupied">Occupied</option>
                   <option value="maintenance">Maintenance</option>
                   <option value="decommissioned">Decommissioned</option>
                 </Select>
               </div>
-
-              {/* Labeled Inline Comment Form Specific to This Resource */}
               <div className="pt-2 border-t border-slate-100">
                 <form onSubmit={(e) => handleCommentSubmit(e, r.id)} className="space-y-2">
                   <input
@@ -98,15 +110,6 @@ export default function HealthcareWorkerDashboard() {
                     placeholder="Log status notes..."
                     className="w-full px-2 py-1 border border-slate-200 rounded text-[11px] outline-none focus:ring-1 focus:ring-blue-500 bg-slate-50"
                   />
-                  <div className="flex justify-end">
-                    <button
-                      type="submit"
-                      disabled={submittingId === r.id}
-                      className="bg-slate-700 hover:bg-slate-800 text-white text-[10px] font-medium py-1 px-2 rounded transition-colors disabled:bg-slate-400"
-                    >
-                      {submittingId === r.id ? "Saving..." : "Log Note"}
-                    </button>
-                  </div>
                 </form>
               </div>
             </Card>
