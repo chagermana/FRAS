@@ -2,17 +2,18 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import DashboardLayout from '../components/DashboardLayout';
 import { Card, StatusBadge, SectionHeading, Select, Input, Button, EmptyState } from '../components/ui';
-import { 
-  getHospitalResources, 
-  getComments, 
-  createComment, 
-  getHospitalUsers, 
-  updateUser, 
-  deleteUser,
+import {
+  getHospitalResources,
+  updateResource,
+  deleteResource,
+  createResource,
   getWards,
   createWard,
-  createResource,
-  deleteResource
+  getHospitalUsers,
+  updateUser,
+  deleteUser,
+  getComments,
+  createComment
 } from '../api/hospitalAdmin';
 import { approveUser, rejectUser } from '../api/approvals';
 
@@ -28,11 +29,15 @@ export default function HospitalAdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [pendingWorkers, setPendingWorkers] = useState([]);
 
+  // Inline Resource Editing State
+  const [editingResourceId, setEditingResourceId] = useState(null);
+  const [editResourceData, setEditResourceData] = useState({ name: '', type: '', quantity: 1, status: '', ward_id: '' });
+
   const load = () => {
     setLoading(true);
     getHospitalResources().then(res => setResources(res.data)).catch(() => setError('Could not load resources'));
     getComments().then(res => setComments(res.data)).catch(() => {});
-    
+
     getWards()
       .then(res => setWards(res.data))
       .catch(() => setError('Could not load facility wards'));
@@ -43,6 +48,8 @@ export default function HospitalAdminDashboard() {
     }).catch(() => {}).finally(() => setLoading(false));
   };
 
+  useEffect(() => { load(); }, []);
+
   const handleApprove = async (id) => {
     try { await approveUser(id); load(); } catch (err) { setError(err.response?.data?.message || 'Could not approve'); }
   };
@@ -50,8 +57,6 @@ export default function HospitalAdminDashboard() {
   const handleReject = async (id) => {
     try { await rejectUser(id); load(); } catch (err) { setError(err.response?.data?.message || 'Could not reject'); }
   };
-
-  useEffect(() => { load(); }, []);
 
   const handleCreateWard = async (e) => {
     e.preventDefault();
@@ -84,6 +89,33 @@ export default function HospitalAdminDashboard() {
     }
   };
 
+  // Start inline editing mode for a single resource item
+  const startEditingResource = (resource) => {
+    setEditingResourceId(resource.id);
+    setEditResourceData({
+      name: resource.name,
+      type: resource.type,
+      quantity: resource.quantity,
+      status: resource.status,
+      ward_id: resource.ward_id || ''
+    });
+  };
+
+  // Persist modified structural parameters of resource items back to API endpoints
+  const handleUpdateResource = async (id) => {
+    try {
+      await updateResource(id, {
+        ...editResourceData,
+        quantity: parseInt(editResourceData.quantity) || 1
+      });
+      setEditingResourceId(null);
+      setError('');
+      load();
+    } catch (err) {
+      setError(err.response?.data?.message || 'Could not save resource details modification');
+    }
+  };
+
   const handleRemoveResource = async (id) => {
     if (!confirm('Permanently decommission and delete this resource?')) return;
     try {
@@ -111,7 +143,17 @@ export default function HospitalAdminDashboard() {
       await updateUser(id, { role });
       load();
     } catch (err) {
-      setError(err.response?.data?.message || 'Could not update user');
+      setError(err.response?.data?.message || 'Could not update user role configuration');
+    }
+  };
+
+  // Modify local ward deployment assignment fields targeting working operators 
+  const handleStaffWardChange = async (id, wardId) => {
+    try {
+      await updateUser(id, { ward_id: wardId ? parseInt(wardId) : null });
+      load();
+    } catch (err) {
+      setError(err.response?.data?.message || 'Could not alter employee structural ward profile location');
     }
   };
 
@@ -255,6 +297,7 @@ export default function HospitalAdminDashboard() {
         </>
       )}
 
+      {/* Staff Management Section */}
       <SectionHeading>Staff</SectionHeading>
       {loading ? (
         <p className="text-slate-400 text-sm mb-8">Loading...</p>
@@ -264,14 +307,30 @@ export default function HospitalAdminDashboard() {
             <Card key={w.id} className="p-4 flex flex-wrap justify-between items-center gap-3">
               <div>
                 <p className="font-medium text-slate-800">{w.name}</p>
-                <p className="text-sm text-slate-500">{w.email} · {w.ward ? w.ward.name : 'No ward'}</p>
+                <p className="text-sm text-slate-500">{w.email} · {w.ward ? w.ward.name : 'No ward assigned'}</p>
               </div>
-              <div className="flex items-center gap-3">
-                <Select value={w.role} onChange={e => handleRoleChange(w.id, e.target.value)}>
-                  <option value="healthcare_worker">Healthcare Worker</option>
-                  <option value="hospital_admin">Hospital Admin</option>
-                </Select>
-                <Button variant="danger" onClick={() => handleRemoveWorker(w.id)}>Remove</Button>
+              <div className="flex items-center gap-3 flex-wrap sm:flex-nowrap">
+                {/* Ward Selection Dropdown to reassign layout context handles */}
+                <div className="flex flex-col">
+                  <label className="text-[10px] text-slate-400 font-medium mb-0.5">Assigned Ward</label>
+                  <Select 
+                    value={w.ward_id || ''} 
+                    onChange={e => handleStaffWardChange(w.id, e.target.value)}
+                  >
+                    <option value="">No Ward</option>
+                    {wards.map(wd => <option key={wd.id} value={wd.id}>{wd.name}</option>)}
+                  </Select>
+                </div>
+
+                <div className="flex flex-col">
+                  <label className="text-[10px] text-slate-400 font-medium mb-0.5">System Security Role</label>
+                  <Select value={w.role} onChange={e => handleRoleChange(w.id, e.target.value)}>
+                    <option value="healthcare_worker">Healthcare Worker</option>
+                    <option value="hospital_admin">Hospital Admin</option>
+                  </Select>
+                </div>
+
+                <Button variant="danger" className="mt-4 sm:mt-0" onClick={() => handleRemoveWorker(w.id)}>Remove</Button>
               </div>
             </Card>
           ))}
@@ -279,46 +338,91 @@ export default function HospitalAdminDashboard() {
         </div>
       )}
 
+      {/* Resources Management Dashboard View Block */}
       <SectionHeading>Resources</SectionHeading>
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
-        {resources.map(r => (
-          <Card key={r.id} className="p-4 flex flex-col justify-between">
-            <div>
-              <div className="flex justify-between items-start mb-2">
-                <h3 className="font-medium text-slate-800">{r.name}</h3>
-                <StatusBadge status={r.status} />
-              </div>
-              <p className="text-sm text-slate-500">{r.type} · Qty {r.quantity}</p>
-              {r.ward && <p className="text-xs text-slate-400 mt-1">📍 {r.ward.name}</p>}
-            </div>
-            <div className="mt-4 pt-3 border-t border-slate-100 flex justify-end">
-              <Button variant="danger" onClick={() => handleRemoveResource(r.id)}>Decommission</Button>
-            </div>
-          </Card>
-        ))}
+        {resources.map(r => {
+          const isEditing = editingResourceId === r.id;
+
+          return (
+            <Card key={r.id} className="p-4 flex flex-col justify-between border-slate-200">
+              {isEditing ? (
+                // Edit Form Context Rendering Interface
+                <div className="space-y-2.5">
+                  <div>
+                    <label className="block text-[10px] font-medium text-slate-400 mb-0.5">Resource Name</label>
+                    <Input
+                      value={editResourceData.name}
+                      onChange={e => setEditResourceData({ ...editResourceData, name: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-medium text-slate-400 mb-0.5">Category Type</label>
+                    <Input
+                      value={editResourceData.type}
+                      onChange={e => setEditResourceData({ ...editResourceData, type: e.target.value })}
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="block text-[10px] font-medium text-slate-400 mb-0.5">Quantity</label>
+                      <Input
+                        type="number"
+                        value={editResourceData.quantity}
+                        onChange={e => setEditResourceData({ ...editResourceData, quantity: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-medium text-slate-400 mb-0.5">Status</label>
+                      <Select
+                        value={editResourceData.status}
+                        onChange={e => setEditResourceData({ ...editResourceData, status: e.target.value })}
+                      >
+                        <option value="available">Available</option>
+                        <option value="occupied">Occupied</option>
+                        <option value="maintenance">Maintenance</option>
+                      </Select>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-medium text-slate-400 mb-0.5">Facility Location Ward</label>
+                    <Select
+                      value={editResourceData.ward_id}
+                      onChange={e => setEditResourceData({ ...editResourceData, ward_id: e.target.value })}
+                    >
+                      <option value="">Select ward...</option>
+                      {wards.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
+                    </Select>
+                  </div>
+                  <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+                    <Button variant="secondary" onClick={() => setEditingResourceId(null)}>Cancel</Button>
+                    <Button onClick={() => handleUpdateResource(r.id)}>Save Changes</Button>
+                  </div>
+                </div>
+              ) : (
+                // Base Display View Render State Context
+                <>
+                  <div>
+                    <div className="flex justify-between items-start mb-2">
+                      <h3 className="font-medium text-slate-800">{r.name}</h3>
+                      <StatusBadge status={r.status} />
+                    </div>
+                    <p className="text-sm text-slate-500">{r.type} · Qty {r.quantity}</p>
+                    {r.ward && <p className="text-xs text-slate-400 mt-1">📍 {r.ward.name}</p>}
+                  </div>
+                  <div className="mt-4 pt-3 border-t border-slate-100 flex justify-between gap-2">
+                    <Button variant="secondary" onClick={() => startEditingResource(r)}>Edit Details</Button>
+                    <Button variant="danger" onClick={() => handleRemoveResource(r.id)}>Decommission</Button>
+                  </div>
+                </>
+              )}
+            </Card>
+          );
+        })}
         {resources.length === 0 && <EmptyState>No resources recorded yet.</EmptyState>}
       </div>
 
-      <SectionHeading>Comments</SectionHeading>
-      <Card className="p-4 mb-6">
-        <form onSubmit={handleAddComment} className="flex flex-wrap gap-2">
-          <Select
-            value={newComment.resource_id}
-            onChange={e => setNewComment({ ...newComment, resource_id: e.target.value })}
-          >
-            <option value="">Select resource...</option>
-            {resources.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
-          </Select>
-          <Input
-            placeholder="Add a comment..."
-            value={newComment.content}
-            onChange={e => setNewComment({ ...newComment, content: e.target.value })}
-            className="flex-1 min-w-[160px]"
-          />
-          <Button type="submit">Post</Button>
-        </form>
-      </Card>
-
+      <SectionHeading>Ward Condition Logs & Comments</SectionHeading>
       <div className="space-y-3">
         {myHospitalComments.map(c => (
           <Card key={c.id} className="p-4">
